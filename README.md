@@ -1,4 +1,5 @@
 [![Go](https://github.com/artheus/ohgossh/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/artheus/ohgossh/actions/workflows/go.yml)
+[![CodeQL](https://github.com/artheus/ohgossh/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/artheus/ohgossh/actions/workflows/codeql-analysis.yml)
 
 # ohgossh
 
