@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	. "github.com/artheus/ohgossh/utils"
 	"io"
 	"os"
 )
