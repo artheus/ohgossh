@@ -3,6 +3,7 @@ package ssh
 import (
 	"fmt"
 	"github.com/artheus/ohgossh/host"
+	. "github.com/artheus/ohgossh/utils"
 	"github.com/fatih/color"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
