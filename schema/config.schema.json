@@ -1,0 +1,216 @@
+{
+  $schema: 'http://json-schema.org/draft-07/schema',
+  $id: 'https://github.com/artheus/ohgossh/schema/config.schema.json',
+  title: 'OhGoSSH Config',
+  description: 'Configuration file for OhGoSSH',
+  type: 'object',
+  definitions: {
+    BasicAuthModel: {
+      type: "object",
+      properties: {
+        user: {
+          type: "string",
+          title: "Username",
+          "x-intellij-language-injection": {
+            language: "GoTemplate",
+            gotype: "types.TemplateContext"
+          }
+        },
+        pass: {
+          type: "string",
+          title: "Password",
+          "x-intellij-language-injection": {
+            language: "GoTemplate"
+          }
+        }
+      },
+      additionalProperties: false
+    },
+    PortNumberModel: {
+      type: 'integer',
+      description: "Port number (1-65563)",
+      minimum: 1,
+      maximum: 65563
+    },
+    HTTPProxyModel: {
+      type: "object",
+      properties: {
+        host: {
+          type: "string",
+          format: "hostname"
+        },
+        port: {
+          $ref: "#/definitions/PortNumberModel"
+        },
+        auth: {
+          $ref: "#/definitions/BasicAuthModel"
+        }
+      },
+      additionalProperties: false
+    },
+    HostPropertyModel: {
+      type: "object",
+      properties: {
+        user: {
+          type: "string",
+          description: "Username to use for connection",
+          format: "username",
+          "x-intellij-language-injection": {
+            language: "GoTemplate",
+            gotype: "types.TemplateContext"
+          }
+        },
+        httpProxy: {
+          $ref: "#/definitions/HTTPProxyModel"
+        },
+        gssApi: {
+          type: "object",
+          properties: {
+            "enabled": {
+              type: "boolean"
+            },
+            "delegateCredentials": {
+              type: "boolean"
+            }
+          },
+          additionalProperties: false
+        },
+        port: {
+          $ref: "#/definitions/PortNumberModel"
+        },
+        timeout: {
+          type: "string",
+          description: "Timeout for connection, provided in go time.Duration string format",
+        },
+        jumpHost: {
+          type: "string",
+          description: "Jump host to use for connection",
+          "x-intellij-language-injection": {
+            language: "GoTemplate"
+          }
+        },
+        identityFile: {
+          type: "string",
+          description: "Identity file to use for authentication (default: ~/.ssh/id_rsa)",
+          "x-intellij-language-injection": {
+            language: "GoTemplate"
+          }
+        },
+        prefix: {
+          type: "string",
+          description: "Prefix to be prepended to final hostname",
+          "x-intellij-language-injection": {
+            language: "GoTemplate"
+          }
+        },
+        suffix: {
+          type: "string",
+          description: "Suffix to be appended to final hostname",
+          "x-intellij-language-injection": {
+            language: "GoTemplate"
+          }
+        },
+        preferredAuthentications: {
+          type: "array",
+          items: {
+            type: "string",
+            enum: [
+              "none",
+              "gssapi-with-mic",
+              "hostbased",
+              "publickey",
+              "keyboard-interactive",
+              "password"
+            ]
+          }
+        }
+      }
+    },
+    HostModel: {
+      type: "object",
+      title: 'Host',
+      description: 'Host configuration',
+      $ref: "#/definitions/HostPropertyModel",
+      additionalProperties: false,
+      oneOf: [
+        {
+          type: 'object',
+          description: "Literal host match",
+          properties: {
+            name: {
+              type: 'string',
+              title: "Host name",
+              description: 'Literal name for host name. Mutually exclusive with respect to pattern',
+              "x-intellij-html-description": "Literal name for host name<br/><strong>Mutually exclusive with respect to <code>pattern</code></strong>"
+            },
+            aliases: {
+              type: "array",
+              description: "Host name aliases",
+              items: {
+                type: "string",
+                description: "Host name alias"
+              }
+            }
+          },
+          required: [
+            'name'
+          ],
+          not: {
+            required: [
+              'pattern',
+              'replace'
+            ]
+          }
+        },
+        {
+          type: 'object',
+          description: "Regexp host match",
+          properties: {
+            pattern: {
+              type: 'string',
+              title: "Regexp pattern",
+              description: 'pattern for host name. Mutually exclusive with respect to name',
+              'x-intellij-language-injection': {
+                language: 'GoRegExp',
+                prefix: "^",
+                suffix: "$"
+              },
+              "x-intellij-html-description": "Host name match pattern<br/><strong>Mutually exclusive with respect to <code>name</code></strong>"
+            },
+            replace: {
+              type: "string",
+              description: "Replacement template for regexp",
+              "x-intellij-html-description": "Replacement template for regexp<br/>Format: GoTemplate<br/><strong>Can only be used together with <code>pattern</code></strong>",
+              "x-intellij-language-injection": {
+                language: "GoTemplate"
+              }
+            }
+          },
+          required: [
+            'pattern'
+          ],
+          not: {
+            required: [
+              'name'
+            ]
+          }
+        }
+      ]
+    }
+  },
+  properties: {
+    hosts: {
+      type: 'array',
+      description: 'List of hosts',
+      items: {
+        $ref: '#/definitions/HostModel'
+      },
+      additionalProperties: false,
+    },
+    defaults: {
+      $ref: '#/definitions/HostPropertyModel',
+      additionalProperties: false,
+    },
+  },
+  additionalProperties: false
+}
