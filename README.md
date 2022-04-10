@@ -30,6 +30,8 @@ ohgossh uses the yaml format for the config file. The yaml config allows
 users to add their own PERL compatible regexp patterns and using Go templates
 for rendering hostnames and options.
 
+There is a json-schema, for the config file, available here: [schema/config.schema.json](schema/config.schema.json)
+
 Here is an example config from `config/examples/regexp.yml`:
 
 ```yaml
