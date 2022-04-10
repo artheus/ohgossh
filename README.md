@@ -1,3 +1,5 @@
+[![Go](https://github.com/artheus/ohgossh/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/artheus/ohgossh/actions/workflows/go.yml)
+
 # ohgossh
 
 SSH alternative command line client written in Go
