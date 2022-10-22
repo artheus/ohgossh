@@ -3,10 +3,10 @@ package ssh
 import (
 	"crypto/x509"
 	"fmt"
-	"github.com/artheus/ohgossh/gssapi"
 	"github.com/artheus/ohgossh/host"
 	"github.com/artheus/ohgossh/prompt"
 	"github.com/artheus/ohgossh/utils"
+	"github.com/bodgit/sshkrb5"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
@@ -38,17 +38,18 @@ func authMethodFor(auth string, host *host.Host) (authMethod ssh.AuthMethod, err
 
 		return ssh.PublicKeys(signer), err
 	case "gssapi-with-mic":
-		return ssh.GSSAPIWithMICAuthMethod(gssApiArgs(host.Name)), nil
+		var gaClient *sshkrb5.Client
+
+		if gaClient, err = sshkrb5.NewClient(); err != nil {
+			return nil, errors.Wrap(err, "GSSAPI client failed to initialize")
+		}
+
+		return ssh.GSSAPIWithMICAuthMethod(gaClient, host.Name), nil
 	case "keyboard-interactive":
 		return ssh.KeyboardInteractive(keyboardChallenge), nil
 	}
 
 	return nil, errors.Errorf("unsupported auth method: %s", auth)
-}
-
-func gssApiArgs(target string) (ssh.GSSAPIClient, string) {
-	// TODO: gssapi.NewClient() has yet to be implemented
-	return gssapi.NewClient(), target
 }
 
 func keyboardChallenge(user, instruction string, questions []string, echos []bool) (answers []string, err error) {

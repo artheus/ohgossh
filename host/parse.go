@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"net/url"
+	"os"
 	"os/user"
 	"strconv"
 	"strings"
@@ -103,6 +104,14 @@ func Parse(hostURL *url.URL, conf *config.Config) (host *Host, err error) {
 	// override username, if provided by command argument
 	if hostURL.User.Username() != "" {
 		host.User = hostURL.User.Username()
+	}
+
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		logrus.Debugf("Using following host config for host %s:", host.Name)
+		ye := yaml.NewEncoder(os.Stdout)
+		ye.SetIndent(2)
+		defer ye.Close()
+		ye.Encode(host.HostParams)
 	}
 
 	return host, err

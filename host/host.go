@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/artheus/ohgossh/config"
 	"github.com/artheus/ohgossh/utils"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 	"net"
@@ -22,6 +23,8 @@ type Host struct {
 }
 
 func NewHost(hostURL *url.URL, conf *config.Config) (*Host, error) {
+	logrus.Debugf("creating new host %s", hostURL.String())
+	logrus.Debugf("Using known_hosts file %s", conf.KnownHostsFilename)
 	var hkc, err = knownhosts.New(conf.KnownHostsFilename)
 
 	if err != nil {
@@ -29,10 +32,16 @@ func NewHost(hostURL *url.URL, conf *config.Config) (*Host, error) {
 	}
 
 	return &Host{
-		HostParams:          config.DefaultHostParams(),
-		URL:                 hostURL,
-		Config:              conf,
-		certCheckerCallback: hkc,
+		HostParams: config.DefaultHostParams(),
+		URL:        hostURL,
+		Config:     conf,
+		certCheckerCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) (err error) {
+			if err = hkc(hostname, remote, key); err != nil {
+				logrus.Debug("Host key not recognized, should prompt user to add")
+			}
+
+			return nil
+		},
 	}, err
 }
 

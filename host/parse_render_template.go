@@ -2,11 +2,13 @@ package host
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/artheus/ohgossh/prompt"
 	"github.com/artheus/ohgossh/utils"
 	regexp "github.com/gijsbers/go-pcre"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"math/rand"
 	"os/user"
 	"reflect"
 	"text/template"
@@ -30,25 +32,29 @@ func renderTemplate(hostname, templateStr string, captureGroups *regexp.Matcher)
 		Host:      hostname,
 	}
 
+	logrus.Debugf("Template context: %+v", tempCtx)
+
 	logrus.Trace("registering functions for template engine")
-	temp.Funcs(map[string]any{
-		"capture": func(i int) string {
-			defer utils.LogErrors()
-
-			if captureGroups == nil {
-				panic(errors.New("unable to supply capture groups, no regexp pattern matched for host"))
-			}
-
-			if i > captureGroups.Groups() {
-				panic(errors.New("index out of bounds in host replace template"))
-			}
-
-			return captureGroups.GroupString(i)
+	var tempFuncs = map[string]any{
+		"randomChoice": func(choices ...any) any {
+			return choices[rand.Intn(len(choices))]
 		},
 		"askpass": promptForInput(true),
 		"prompt":  promptForInput(false),
 		"default": defaultFunc(),
-	})
+	}
+
+	if captureGroups != nil {
+		for i := 1; i <= captureGroups.Groups(); i++ {
+			tempFuncs[fmt.Sprintf("c%d", i)] = func(group int) func() string {
+				return func() string {
+					return captureGroups.GroupString(group)
+				}
+			}(i)
+		}
+	}
+
+	temp.Funcs(tempFuncs)
 
 	logrus.Trace("parsing replace template")
 	_, err = temp.Parse(templateStr)
@@ -58,7 +64,7 @@ func renderTemplate(hostname, templateStr string, captureGroups *regexp.Matcher)
 	buf := bytes.NewBuffer([]byte{})
 
 	utils.PanicOnError(
-		temp.Execute(buf, tempCtx),
+		temp.Execute(buf, &tempCtx),
 	)
 
 	renderedHostname = buf.String()

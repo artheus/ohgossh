@@ -36,7 +36,7 @@ func Connect(host *host.Host, command []string) (err error) {
 	PanicOnError(err)
 
 	session, err := client.NewSession()
-	PanicOnError(err)
+	PanicOnError(errors.Wrap(err, "failed to open ssh session"))
 
 	defer Close(session)
 

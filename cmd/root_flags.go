@@ -1,6 +1,8 @@
 package cmd
 
-import "github.com/artheus/ohgossh/consts"
+import (
+	"github.com/artheus/ohgossh/version"
+)
 
 var (
 	flagsConfig = &FlagsConfig{}
@@ -17,7 +19,7 @@ func init() {
 	// Note: Stop flag parsing after first non-flag argument
 	rootCommand.Flags().SetInterspersed(false)
 
-	rootCommand.Version = consts.OhGosshVersion
+	rootCommand.Version = version.Version()
 
 	rootCommand.PersistentFlags().BoolVar(&flagsConfig.debugLogging, "debug", false, "enable debug logging")
 	rootCommand.PersistentFlags().BoolVar(&flagsConfig.traceLogging, "trace", false, "enable trace logging")

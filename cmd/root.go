@@ -71,7 +71,7 @@ var rootCommand = &cobra.Command{
 		utils.PanicOnError(err)
 
 		if flagsConfig.config == "" {
-			flagsConfig.config = "~/.ohgossh/config.yml"
+			flagsConfig.config = "~/.ssh/ohgossh.yml"
 		}
 
 		if flagsConfig.knownHostsFile == "" {
