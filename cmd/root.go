@@ -30,9 +30,12 @@ var rootCommand = &cobra.Command{
 		"gossh",
 	},
 	Args: func(cmd *cobra.Command, args []string) (err error) {
-		if flagsConfig.debugLogging {
-			logrus.Infof("Activating debug logging")
+		if flagsConfig.verbose == 1 {
+			logrus.Infof("Debug logging enabled")
 			logrus.SetLevel(logrus.DebugLevel)
+		} else if flagsConfig.verbose > 1 {
+			logrus.Infof("Trace logging enabled")
+			logrus.SetLevel(logrus.TraceLevel)
 		}
 
 		logrus.Debugf("args: %+v", args)

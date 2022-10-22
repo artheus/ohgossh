@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/artheus/ohgossh/version"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -9,10 +10,9 @@ var (
 )
 
 type FlagsConfig struct {
-	debugLogging   bool
-	traceLogging   bool
 	config         string
 	knownHostsFile string
+	verbose        int
 }
 
 func init() {
@@ -21,9 +21,11 @@ func init() {
 
 	rootCommand.Version = version.Version()
 
-	rootCommand.PersistentFlags().BoolVar(&flagsConfig.debugLogging, "debug", false, "enable debug logging")
-	rootCommand.PersistentFlags().BoolVar(&flagsConfig.traceLogging, "trace", false, "enable trace logging")
+	flagSet := pflag.NewFlagSet("flags", pflag.ExitOnError)
+	flagSet.CountVarP(&flagsConfig.verbose, "verbose", "v", "increased verbosity per flag added")
 
-	rootCommand.PersistentFlags().StringVarP(&flagsConfig.config, "config", "c", "~/.ssh/ohgossh.yml", "config file path")
-	rootCommand.PersistentFlags().StringVarP(&flagsConfig.knownHostsFile, "known-hosts", "k", "~/.ssh/known_hosts", "known_hosts file path")
+	flagSet.StringVarP(&flagsConfig.config, "config", "c", "~/.ssh/ohgossh.yml", "config file path")
+	flagSet.StringVarP(&flagsConfig.knownHostsFile, "known-hosts", "k", "~/.ssh/known_hosts", "known_hosts file path")
+
+	rootCommand.PersistentFlags().AddFlagSet(flagSet)
 }
