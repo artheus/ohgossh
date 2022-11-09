@@ -11,24 +11,24 @@ defaults:
 
 hosts:
   - pattern: "jump-(uk|us)\\.(dev|stage)"
-    replace: "jumphost-0{{if eq (capture 1) `uk`}}{{ random.Number 1 2 }}{{else}}{{ random.Number 3 4 }}{{end}}.{{capture 2}}.example.domain"
+    replace: "jumphost-0{{if eq c1 `uk`}}{{ randomChoice 1 2 }}{{else}}{{ randomChoice 3 4 }}{{end}}.{{ c2 }}.example.domain"
     user: admin
 
   - pattern: "jump-(uk|us)\\.prod"
-    replace: "jumpprod-{{if eq (capture 1) `uk`}}{{ random.Number 1 2 }}{{else}}{{ random.Number 3 4 }}{{end}}.example.domain"
+    replace: "jumpprod-{{if eq c1 `uk`}}{{ randomChoice 1 2 }}{{else}}{{ randomChoice 3 4 }}{{end}}.example.domain"
     user: "prod-admin"
     gssApi:
       enabled: true
       delegateCredentials: true
 
   - pattern: "k8s-((master|worker)[0-9]*)-(uk|us)\\.(dev|stage|prod)"
-    replace: "{{capture 1}}-{{capture 2}}-{{capture 4}}.{{capture 5}}"
+    replace: "{{ c1 }}-{{ c2 }}-{{ c4 }}.{{ c5 }}"
     user: "core"
     identityFile: "~/.ssh/id_rsa.ansible"
 
   - pattern: "((?!jump).*?-(uk|us))\\.(dev|stage|prod)"
-    replace: "{{capture 1}}"
-    jumpHost: "jump-{{capture 2}}.{{capture 3}}"
+    replace: "{{ c1 }}"
+    jumpHost: "jump-{{ c2 }}.{{ c3 }}"
 
   - name: "github.com"
     aliases:
