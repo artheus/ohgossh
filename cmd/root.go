@@ -38,13 +38,17 @@ var rootCommand = &cobra.Command{
 			logrus.SetLevel(logrus.TraceLevel)
 		}
 
-		logrus.Debugf("args: %+v", args)
+		logrus.Tracef("Started with arguments: %+v", args)
 
 		if len(args) == 0 {
 			return ErrorNoHostname
 		}
 
-		var hostString = args[0]
+		var hostString string
+		hostString, command = args[0], args[1:]
+
+		logrus.Tracef("host: %s", hostString)
+		logrus.Tracef("command: %+v", command)
 
 		if !strings.HasPrefix(hostString, "ssh://") {
 			hostString = fmt.Sprintf("ssh://%s", hostString)
@@ -53,15 +57,6 @@ var rootCommand = &cobra.Command{
 		hostURL, err = url.Parse(hostString)
 		if err != nil {
 			return errors.Wrap(err, "unable to parse hostURL as url")
-		}
-
-		if len(args) > 1 {
-			// Remove -- from command, if given as an argument before command
-			if args[1] == "--" {
-				args = args[1:]
-			}
-
-			command = args[1:]
 		}
 
 		return nil
@@ -92,18 +87,22 @@ var rootCommand = &cobra.Command{
 		return
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		defer utils.HandleError(&err)
-
 		cmd.Root().SilenceUsage = true
 		cmd.Root().SilenceErrors = true
 
 		config, err := config.LoadConfig(flagsConfig.config)
-		utils.PanicOnError(err)
+		if err != nil {
+			logrus.Errorf("Failed to load config: %+v", errors.WithStack(err))
+		}
 
 		config.KnownHostsFilename = flagsConfig.knownHostsFile
 
 		host, err := host.Parse(hostURL, config)
-		utils.PanicOnError(errors.Wrap(err, "failed to parse host from config"))
+		if err != nil {
+			logrus.Errorf("failed to parse host from config: %+v", errors.WithStack(err))
+		}
+
+		logrus.Tracef("host url: %+v", hostURL)
 
 		host.URL = hostURL
 
@@ -113,17 +112,15 @@ var rootCommand = &cobra.Command{
 
 		if hostURL.Port() != "" {
 			var portnum uint64
-			portnum, err = strconv.ParseUint(hostURL.Port(), 10, 16)
-			utils.PanicOnError(errors.Wrapf(err, "unable to parse port number as uint16: %s", hostURL.Port()))
+			if portnum, err = strconv.ParseUint(hostURL.Port(), 10, 16); err != nil {
+				logrus.Errorf("unable to parse port number as uint16: %s: %+v", hostURL.Port(), errors.WithStack(err))
+			}
 			host.Port = uint16(portnum)
 		}
 
-		utils.PanicOnError(
-			errors.Wrap(
-				ssh.Connect(host, command),
-				"failed to connect to host",
-			),
-		)
+		if err = ssh.Connect(host, command); err != nil {
+			logrus.Errorf("connection failed: %+v", err)
+		}
 
 		return err
 	},

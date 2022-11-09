@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"github.com/artheus/ohgossh/host"
-	"github.com/artheus/ohgossh/utils"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
@@ -14,11 +13,16 @@ func Dial(host *host.Host, jumpHost *host.Host) (client *ssh.Client, err error) 
 		var conn net.Conn
 		var jumpHostClient *ssh.Client
 
-		jumpHostClientConfig := jumpHost.SSHClientConfig()
-
 		logrus.Debugf("ssh dial jumphost %s", jumpHost.Addr())
-		if jumpHostClient, err = ssh.Dial("tcp", jumpHost.Addr(), jumpHostClientConfig); err != nil {
-			return nil, err
+		jumpHostClient, err = attemptConnect(jumpHost, func(sshConf *ssh.ClientConfig) (client *ssh.Client, err error) {
+			client, err = ssh.Dial("tcp", jumpHost.Addr(), sshConf)
+			err = errors.Wrapf(err, "failed to dial jumphost %s", jumpHost.Addr())
+			return
+		})
+
+		if err != nil {
+			logrus.Errorf("failed to connect to jumphost %s: %+v", jumpHost.Addr(), errors.WithStack(err))
+			return nil, errors.Wrapf(err, "unable to connect to jumphost %s", jumpHost.Addr())
 		}
 
 		logrus.Debugf("ssh client dial jumphost %s", jumpHost.Addr())
@@ -26,7 +30,7 @@ func Dial(host *host.Host, jumpHost *host.Host) (client *ssh.Client, err error) 
 			return nil, err
 		}
 
-		return tryConnect(host, func(sshConf *ssh.ClientConfig) (client *ssh.Client, err error) {
+		return attemptConnect(host, func(sshConf *ssh.ClientConfig) (client *ssh.Client, err error) {
 			var clientConn ssh.Conn
 			var newChan <-chan ssh.NewChannel
 			var reqChan <-chan *ssh.Request
@@ -41,7 +45,7 @@ func Dial(host *host.Host, jumpHost *host.Host) (client *ssh.Client, err error) 
 		})
 	}
 
-	return tryConnect(
+	return attemptConnect(
 		host,
 		func(sshConf *ssh.ClientConfig) (client *ssh.Client, err error) {
 			return ssh.Dial("tcp", host.Addr(), sshConf)
@@ -51,9 +55,7 @@ func Dial(host *host.Host, jumpHost *host.Host) (client *ssh.Client, err error) 
 
 type connectFunc func(sshConf *ssh.ClientConfig) (*ssh.Client, error)
 
-func tryConnect(host *host.Host, c connectFunc) (client *ssh.Client, err error) {
-	utils.HandleError(&err)
-
+func attemptConnect(host *host.Host, c connectFunc) (client *ssh.Client, err error) {
 	var authMethod ssh.AuthMethod
 	var sshConf = host.SSHClientConfig()
 
@@ -61,7 +63,9 @@ func tryConnect(host *host.Host, c connectFunc) (client *ssh.Client, err error) 
 
 	for _, methodStr := range host.PreferredAuth {
 		authMethod, err = authMethodFor(methodStr, host)
-		utils.PanicOnError(err)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get authMethod for method string '%s' and host %s", methodStr, host.Addr())
+		}
 
 		sshConf.Auth = []ssh.AuthMethod{authMethod}
 

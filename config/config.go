@@ -42,7 +42,7 @@ type HostParams struct {
 	JumpHost              string           `yaml:"jumpHost,omitempty"`
 	HttpProxy             *HttpProxyParams `yaml:"httpProxy,omitempty"`
 	Timeout               time.Duration    `yaml:"timeout,omitempty"`
-	InsecureIgnoreHostKey bool             `yaml:"InsecureIgnoreHostKey,omitempty"`
+	InsecureIgnoreHostKey bool             `yaml:"ignoreHostKey,omitempty"`
 }
 
 type GssAPIParams struct {

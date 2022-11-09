@@ -3,7 +3,6 @@ package host
 import (
 	"fmt"
 	"github.com/artheus/ohgossh/config"
-	"github.com/artheus/ohgossh/utils"
 	regexp "github.com/gijsbers/go-pcre"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -16,12 +15,11 @@ import (
 )
 
 func Parse(hostURL *url.URL, conf *config.Config) (host *Host, err error) {
-	defer utils.HandleError(&err)
-
 	var hostnameMatcher *regexp.Matcher
 
-	host, err = NewHost(hostURL, conf)
-	utils.PanicOnError(err)
+	if host, err = NewHost(hostURL, conf); err != nil {
+		return nil, err
+	}
 
 	logrus.Debugf("hostURL: %s", hostURL)
 	logrus.Debugf("conf: %+v", conf)
@@ -62,14 +60,15 @@ func Parse(hostURL *url.URL, conf *config.Config) (host *Host, err error) {
 		if hostParams.Pattern != "" {
 			var rePattern regexp.Regexp
 
-			rePattern, err = regexp.Compile(
+			if rePattern, err = regexp.Compile(
 				fmt.Sprintf(
 					"^%s$",
 					hostParams.Pattern,
 				),
 				regexp.DOTALL&regexp.JAVASCRIPT_COMPAT&regexp.UTF8,
-			)
-			utils.PanicOnError(errors.Wrapf(err, "unable to compile regexp: %s", hostParams.Pattern))
+			); err != nil {
+				return nil, errors.Wrapf(err, "unable to compile regexp: %s", hostParams.Pattern)
+			}
 
 			matcher := rePattern.MatcherString(hostname, regexp.NOTEMPTY)
 
@@ -78,9 +77,9 @@ func Parse(hostURL *url.URL, conf *config.Config) (host *Host, err error) {
 
 				copyHostParams(&hostParams, &host.HostParams)
 
-				utils.PanicOnError(
-					renderParams(&host.HostParams, hostname, hostnameMatcher),
-				)
+				if err = renderParams(&host.HostParams, hostname, hostnameMatcher); err != nil {
+					return nil, errors.Wrap(err, "failed to render parameters")
+				}
 			}
 		}
 	}
@@ -89,15 +88,16 @@ func Parse(hostURL *url.URL, conf *config.Config) (host *Host, err error) {
 		host.Name = ""
 	}
 
-	utils.PanicOnError(
-		renderParams(&host.HostParams, hostname, hostnameMatcher),
-	)
+	if err = renderParams(&host.HostParams, hostname, hostnameMatcher); err != nil {
+		return nil, errors.Wrap(err, "failed to render parameters")
+	}
 
 	// override port number, if provided by command argument
 	if hostURL.Port() != "" {
 		var p uint64
-		p, err = strconv.ParseUint(hostURL.Port(), 10, 16)
-		utils.PanicOnError(err)
+		if p, err = strconv.ParseUint(hostURL.Port(), 10, 16); err != nil {
+			return nil, errors.Wrap(err, "failed to parse port number")
+		}
 		host.Port = uint16(p)
 	}
 
@@ -118,38 +118,43 @@ func Parse(hostURL *url.URL, conf *config.Config) (host *Host, err error) {
 }
 
 func renderParams(host *config.HostParams, hostname string, hostnameMatcher *regexp.Matcher) (err error) {
-	defer utils.HandleError(&err)
-
 	if host.Replace != "" && hostnameMatcher != nil {
-		host.Name, err = renderTemplate(hostname, host.Replace, hostnameMatcher)
-		utils.PanicOnError(err)
+		if host.Name, err = renderTemplate(hostname, host.Replace, hostnameMatcher); err != nil {
+			return errors.Wrap(err, "failed to render hostname template")
+		}
 
 		host.Pattern = ""
 		host.Replace = ""
 	}
 
-	host.User, err = renderTemplate(hostname, host.User, hostnameMatcher)
-	utils.PanicOnError(err)
+	if host.User, err = renderTemplate(hostname, host.User, hostnameMatcher); err != nil {
+		return errors.Wrap(err, "failed to render username template")
+	}
 
-	host.JumpHost, err = renderTemplate(hostname, host.JumpHost, hostnameMatcher)
-	utils.PanicOnError(err)
+	if host.JumpHost, err = renderTemplate(hostname, host.JumpHost, hostnameMatcher); err != nil {
+		return errors.Wrap(err, "failed to render jumphost template")
+	}
 
-	host.IdentityFile, err = renderTemplate(hostname, host.IdentityFile, hostnameMatcher)
-	utils.PanicOnError(err)
+	if host.IdentityFile, err = renderTemplate(hostname, host.IdentityFile, hostnameMatcher); err != nil {
+		return errors.Wrap(err, "failed to render identity file template")
+	}
 
 	if strings.Contains(host.IdentityFile, "~") {
-		currentUser, err := user.Current()
-		utils.PanicOnError(err)
-
-		host.IdentityFile = strings.Replace(host.IdentityFile, "~", currentUser.HomeDir, -1)
+		if currentUser, err := user.Current(); err != nil {
+			return errors.Wrap(err, "failed to get shell user")
+		} else {
+			host.IdentityFile = strings.Replace(host.IdentityFile, "~", currentUser.HomeDir, -1)
+		}
 	}
 
 	if host.HttpProxy != nil && host.HttpProxy.Auth != nil {
-		host.HttpProxy.Auth.User, err = renderTemplate(hostname, host.HttpProxy.Auth.User, hostnameMatcher)
-		utils.PanicOnError(err)
+		if host.HttpProxy.Auth.User, err = renderTemplate(hostname, host.HttpProxy.Auth.User, hostnameMatcher); err != nil {
+			return errors.Wrap(err, "failed to render htto proxy user template")
+		}
 
-		host.HttpProxy.Auth.Password, err = renderTemplate(hostname, host.HttpProxy.Auth.Password, hostnameMatcher)
-		utils.PanicOnError(err)
+		if host.HttpProxy.Auth.Password, err = renderTemplate(hostname, host.HttpProxy.Auth.Password, hostnameMatcher); err != nil {
+			return errors.Wrap(err, "failed to render http proxy template template")
+		}
 	}
 
 	return
@@ -159,6 +164,10 @@ func renderParams(host *config.HostParams, hostname string, hostnameMatcher *reg
 func copyHostParams(from *config.HostParams, to *config.HostParams) {
 	if from.Name != "" {
 		to.Name = from.Name
+	}
+
+	if from.Port != 0 {
+		to.Port = from.Port
 	}
 
 	if from.Pattern != "" {

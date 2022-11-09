@@ -37,6 +37,7 @@ func NewHost(hostURL *url.URL, conf *config.Config) (*Host, error) {
 		Config:     conf,
 		certCheckerCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) (err error) {
 			if err = hkc(hostname, remote, key); err != nil {
+				// TODO: Prompt user to add host key or not
 				logrus.Debug("Host key not recognized, should prompt user to add")
 			}
 
@@ -69,6 +70,8 @@ func (h *Host) Addr() string {
 	if h.Port != 0 {
 		port = strconv.FormatUint(uint64(h.Port), 10)
 	}
+
+	logrus.Tracef("host port: %s", port)
 
 	return net.JoinHostPort(h.Name, port)
 }
