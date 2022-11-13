@@ -14,4 +14,3 @@ func (p2 *passwordAuth) method() string {
 	//TODO implement me
 	panic("implement me")
 }
-

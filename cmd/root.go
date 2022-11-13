@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	gossh "golang.org/x/crypto/ssh"
 	"net/url"
 	"os/user"
 	"path/filepath"
@@ -118,8 +119,18 @@ var rootCommand = &cobra.Command{
 			host.Port = uint16(portnum)
 		}
 
-		if err = ssh.Connect(host, command); err != nil {
+		// Create client, and connect
+		var client *gossh.Client
+		if client, err = ssh.Connect(host); err != nil {
 			logrus.Errorf("connection failed: %+v", err)
+		}
+
+		// Run session
+		if err = ssh.RunSession(client, command); err != nil {
+			if _, ok := err.(*gossh.ExitMissingError); ok {
+				// Remote connection was exited cleanly, so return no error
+				err = nil
+			}
 		}
 
 		return err

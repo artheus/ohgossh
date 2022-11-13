@@ -9,20 +9,22 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
-	"io/ioutil"
+	"os"
 )
 
 func authMethodFor(auth string, host *host.Host) (authMethod ssh.AuthMethod, err error) {
 	switch auth {
 	case "password":
-		var pass string
-		pass, err = prompt.Secret(fmt.Sprintf("Enter password for %s@%s", host.User, host.Name))
+		if !isTTYAvailable() {
+			return nil, errors.New("No TTY is available, cannot prompt user for password!")
+		}
+		pass, err := prompt.Secret(fmt.Sprintf("Enter password for %s@%s", host.User, host.Name))
 		return ssh.Password(pass), errors.Wrap(err, "password prompt failed")
 	case "publickey":
 		var pemBytes []byte
 		var signer ssh.Signer
 
-		pemBytes, err = ioutil.ReadFile(host.IdentityFile)
+		pemBytes, err = os.ReadFile(host.IdentityFile)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not read identityfile %s", host.IdentityFile)
 		}
@@ -30,6 +32,9 @@ func authMethodFor(auth string, host *host.Host) (authMethod ssh.AuthMethod, err
 		signer, err = ssh.ParsePrivateKey(pemBytes)
 		if _, ok := err.(*ssh.PassphraseMissingError); ok {
 			logrus.Warnf("failed to parse private key: %+v", err)
+			if !isTTYAvailable() {
+				return nil, errors.New("No TTY is available, cannot prompt user for private key passphrase!")
+			}
 			signer, err = privateKeyPassphraseLoop(host, pemBytes, 1)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to get passphrase for private key")

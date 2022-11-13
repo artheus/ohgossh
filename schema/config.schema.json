@@ -80,7 +80,7 @@
         },
         timeout: {
           type: "string",
-          description: "Timeout for connection, provided in go time.Duration string format",
+          description: "Timeout for connection, provided in go time.Duration string format"
         },
         jumpHost: {
           type: "string",
@@ -205,12 +205,12 @@
       items: {
         $ref: '#/definitions/HostModel'
       },
-      additionalProperties: false,
+      additionalProperties: false
     },
     defaults: {
       $ref: '#/definitions/HostPropertyModel',
-      additionalProperties: false,
-    },
+      additionalProperties: false
+    }
   },
   additionalProperties: false
 }
